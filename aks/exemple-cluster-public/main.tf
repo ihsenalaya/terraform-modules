@@ -1,3 +1,17 @@
+terraform {
+  required_version = ">= 1.6.0"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = ">= 4.44.0"
+    }
+  }
+}
+
+provider "azurerm" {
+  features {}
+}
+
 # ---------------------------
 # Infra de test (RG, VNet, Subnet, ACR, Log Analytics)
 # ---------------------------

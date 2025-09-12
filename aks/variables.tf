@@ -246,6 +246,10 @@ variable "monitoring" {
     log_analytics_workspace_id    = optional(string)
     azure_policy_enabled          = optional(bool, false)
     enable_kv_secrets_provider    = optional(bool, false)
+
+    # >>> nouveaux champs pour 4.44.0
+    kv_secret_rotation_enabled    = optional(bool)   # ex: true
+    kv_secret_rotation_interval   = optional(string) # ex: "2m"
   })
   default = {}
 }

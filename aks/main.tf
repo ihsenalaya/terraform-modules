@@ -1,12 +1,4 @@
-terraform {
-  required_version = ">= 1.6.0"
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = ">= 4.44.0"
-    }
-  }
-}
+
 
 locals {
   tags = merge({
@@ -182,10 +174,14 @@ resource "azurerm_kubernetes_cluster" "this" {
 
   azure_policy_enabled = try(var.monitoring.azure_policy_enabled, false)
 
-  dynamic "key_vault_secrets_provider" {
-    for_each = try(var.monitoring.enable_kv_secrets_provider, false) ? [1] : []
-    content {}
+dynamic "key_vault_secrets_provider" {
+  for_each = try(var.monitoring.enable_kv_secrets_provider, false) ? [1] : []
+  content {
+    # au moins un des deux doit être présent
+    secret_rotation_enabled  = try(var.monitoring.kv_secret_rotation_enabled, true)
+    secret_rotation_interval = try(var.monitoring.kv_secret_rotation_interval, null)
   }
+}
 
   # NOTE: 'automatic_channel_upgrade' retiré en 4.x du provider => ne pas utiliser ici.
 
