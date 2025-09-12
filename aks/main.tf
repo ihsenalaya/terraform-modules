@@ -8,9 +8,7 @@ terraform {
   }
 }
 
-provider "azurerm" { 
-  features {} 
-  }
+provider "azurerm" { features {} }
 
 # NOTE: Ce module suppose que le Resource Group existe déjà et est créé par un autre module.
 # Renseignez simplement `var.resource_group_name` avec le nom du RG existant.
@@ -142,7 +140,7 @@ resource "azurerm_kubernetes_cluster" "this" {
             net_core_rmem_max           = try(sysctl_config.value.net_core_rmem_max, null)
             net_core_wmem_default       = try(sysctl_config.value.net_core_wmem_default, null)
             net_core_wmem_max           = try(sysctl_config.value.net_core_wmem_max, null)
-            # net_ipv4_tcp_tw_recycle     = try(sysctl_config.value.net_ipv4_tcp_tw_recycle, null)
+            net_ipv4_tcp_tw_recycle     = try(sysctl_config.value.net_ipv4_tcp_tw_recycle, null)
             vm_max_map_count            = try(sysctl_config.value.vm_max_map_count, null)
           }
         }
@@ -189,7 +187,7 @@ resource "azurerm_kubernetes_cluster" "this" {
     content {}
   }
 
-#  automatic_channel_upgrade = var.automatic_channel_upgrade
+  automatic_channel_upgrade = var.automatic_channel_upgrade
 
   tags = local.tags
 }
@@ -268,3 +266,4 @@ resource "azurerm_role_assignment" "acr_pull" {
   role_definition_name = "AcrPull"
   principal_id         = azurerm_kubernetes_cluster.this.kubelet_identity[0].object_id
 }
+

@@ -1,4 +1,3 @@
-
 output "id" {
   value       = azurerm_kubernetes_cluster.this.id
   description = "ID du cluster"
@@ -32,7 +31,7 @@ output "private_fqdn" {
 
 output "oidc_issuer_url" {
   value       = azurerm_kubernetes_cluster.this.oidc_issuer_url
-  description = "URL de l'issuer OIDC (pour Workload Identity / fédération)"
+  description = "URL de l'issuer OIDC (pour Workload Identity)"
 }
 
 output "oidc_issuer_enabled" {
