@@ -127,11 +127,11 @@ module "aks" {
 
   default_pool = {
     name                  = "system"
-    vm_size               = "Standard_D4s_v5"
+    vm_size               = "Standard_D2as_v6"
     auto_scaling_enabled  = true
     min_count             = 1
     max_count             = 3
-    zones                 = ["1", "2", "3"]
+    zones                 = ["1"]
     os_disk_size_gb       = 128
     os_disk_type          = "Managed"
     node_labels           = { role = "system" }
@@ -163,18 +163,18 @@ module "aks" {
 
   node_pools = {
     apps = {
-      vm_size              = "Standard_D4s_v5"
+      vm_size              = "Standard_D2as_v6"
       mode                 = "User"
       auto_scaling_enabled = true
       min_count            = 0
       max_count            = 5
       node_labels          = { purpose = "apps" }
       node_taints          = []
-      zones                = ["1", "2", "3"]
+      zones                = ["1"]
     }
 
     batch_spot = {
-      vm_size              = "Standard_D4s_v5"
+      vm_size              = "Standard_D2as_v6"
       mode                 = "User"
       priority             = "Spot"
       eviction_policy      = "Delete"
@@ -184,7 +184,7 @@ module "aks" {
       max_count            = 10
       node_labels          = { purpose = "batch" }
       node_taints          = ["batch=true:NoSchedule"]
-      zones                = ["1", "2", "3"]
+      zones                = ["1"]
     }
   }
 
@@ -201,3 +201,15 @@ module "aks" {
 
   tags = local.tags
 }
+
+
+# ---------------------------
+# Sorties utiles
+# ---------------------------
+
+output "aks_id"                { value = module.aks.id }
+output "aks_name"              { value = module.aks.name }
+output "aks_fqdn"              { value = module.aks.fqdn }
+output "aks_private_fqdn"      { value = module.aks.private_fqdn }
+output "aks_oidc_issuer_url"   { value = module.aks.oidc_issuer_url }
+output "kubelet_identity_oid"  { value = module.aks.kubelet_identity_object_id }
