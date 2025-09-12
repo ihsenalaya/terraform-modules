@@ -137,7 +137,7 @@ module "aks" {
 
   default_pool = {
     name                  = "system"
-    vm_size               = "Standard_D4s_v5"
+    vm_size               = "Standard_D2as_v6"
     auto_scaling_enabled  = true     # <- renommé
     min_count             = 1
     max_count             = 1
@@ -173,7 +173,7 @@ module "aks" {
 
   node_pools = {
     apps = {
-      vm_size              = "Standard_D4s_v5"
+      vm_size              = "Standard_D2as_v6"
       mode                 = "User"
       auto_scaling_enabled = true     # <- renommé
       min_count            = 0
@@ -184,7 +184,7 @@ module "aks" {
     }
 
     batch_spot = {
-      vm_size              = "Standard_D4s_v5"
+      vm_size              = "Standard_D2as_v6"
       mode                 = "User"
       priority             = "Spot"
       eviction_policy      = "Delete"
