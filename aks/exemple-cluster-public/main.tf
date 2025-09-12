@@ -140,8 +140,8 @@ module "aks" {
     vm_size               = "Standard_D4s_v5"
     auto_scaling_enabled  = true     # <- renommé
     min_count             = 1
-    max_count             = 3
-    zones                 = ["1", "2", "3"]
+    max_count             = 1
+    zones                 = ["1"]
     os_disk_size_gb       = 128
     os_disk_type          = "Managed"
     node_labels           = { role = "system" }
@@ -177,10 +177,10 @@ module "aks" {
       mode                 = "User"
       auto_scaling_enabled = true     # <- renommé
       min_count            = 0
-      max_count            = 5
+      max_count            = 1
       node_labels          = { purpose = "apps" }
       node_taints          = []
-      zones                = ["1", "2", "3"]
+      zones                = ["1"]
     }
 
     batch_spot = {
@@ -191,10 +191,10 @@ module "aks" {
       spot_max_price       = -1
       auto_scaling_enabled = true     # <- renommé
       min_count            = 0
-      max_count            = 10
+      max_count            = 1
       node_labels          = { purpose = "batch" }
       node_taints          = ["batch=true:NoSchedule"]
-      zones                = ["1", "2", "3"]
+      zones                = ["1"]
     }
   }
 
