@@ -105,9 +105,7 @@ resource "azurerm_kubernetes_cluster" "this" {
     orchestrator_version = try(var.default_pool.orchestrator_version, null)
 
     # Subnet uniquement si CNI Azure/Overlay
-    vnet_subnet_id = contains(["azure", "azure_overlay"], var.network.network_plugin)
-      ? try(var.network.vnet_subnet_id, null)
-      : null
+    vnet_subnet_id = contains(["azure", "azure_overlay"], var.network.network_plugin) ? try(var.network.vnet_subnet_id, null) : null
 
     zones             = try(var.default_pool.zones, null)
     os_disk_size_gb   = try(var.default_pool.os_disk_size_gb, null)
