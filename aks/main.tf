@@ -1,3 +1,18 @@
+terraform {
+  required_version = ">= 1.6.0"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = ">= 3.100.0"
+    }
+  }
+}
+
+provider "azurerm" { features {} }
+
+# NOTE: Ce module suppose que le Resource Group existe déjà et est créé par un autre module.
+# Renseignez simplement `var.resource_group_name` avec le nom du RG existant.
+
 locals {
   tags = merge({
     "managed-by" = "terraform",
@@ -89,7 +104,7 @@ resource "azurerm_kubernetes_cluster" "this" {
     max_count           = try(var.default_pool.max_count, null)
     max_pods            = try(var.default_pool.max_pods, null)
     orchestrator_version= try(var.default_pool.orchestrator_version, null)
-    vnet_subnet_id      = contains(["azure","azure_overlay"], var.network.network_plugin) ? var.network.vnet_subnet_id : null
+    vnet_subnet_id      = try(var.network.vnet_subnet_id, null)
     zones               = try(var.default_pool.zones, null)
     os_disk_size_gb     = try(var.default_pool.os_disk_size_gb, null)
     os_disk_type        = try(var.default_pool.os_disk_type, null)
@@ -140,21 +155,21 @@ resource "azurerm_kubernetes_cluster" "this" {
   dynamic "auto_scaler_profile" {
     for_each = length(keys(var.auto_scaler_profile)) > 0 ? [var.auto_scaler_profile] : []
     content {
-      balance_similar_node_groups    = try(each.value.balance_similar_node_groups, null)
-      expander                       = try(each.value.expander, null)
-      max_graceful_termination_sec   = try(each.value.max_graceful_termination_sec, null)
-      max_node_provisioning_time     = try(each.value.max_node_provisioning_time, null)
-      max_unready_nodes              = try(each.value.max_unready_nodes, null)
-      max_unready_percentage         = try(each.value.max_unready_percentage, null)
-      new_pod_scale_up_delay         = try(each.value.new_pod_scale_up_delay, null)
-      scale_down_delay_after_add     = try(each.value.scale_down_delay_after_add, null)
-      scale_down_delay_after_delete  = try(each.value.scale_down_delay_after_delete, null)
-      scale_down_delay_after_failure = try(each.value.scale_down_delay_after_failure, null)
-      scan_interval                  = try(each.value.scan_interval, null)
-      scale_down_unneeded            = try(each.value.scale_down_unneeded, null)
-      scale_down_unready             = try(each.value.scale_down_unready, null)
-      skip_nodes_with_local_storage  = try(each.value.skip_nodes_with_local_storage, null)
-      skip_nodes_with_system_pods    = try(each.value.skip_nodes_with_system_pods, null)
+      balance_similar_node_groups    = try(auto_scaler_profile.value.balance_similar_node_groups, null)
+      expander                       = try(auto_scaler_profile.value.expander, null)
+      max_graceful_termination_sec   = try(auto_scaler_profile.value.max_graceful_termination_sec, null)
+      max_node_provisioning_time     = try(auto_scaler_profile.value.max_node_provisioning_time, null)
+      max_unready_nodes              = try(auto_scaler_profile.value.max_unready_nodes, null)
+      max_unready_percentage         = try(auto_scaler_profile.value.max_unready_percentage, null)
+      new_pod_scale_up_delay         = try(auto_scaler_profile.value.new_pod_scale_up_delay, null)
+      scale_down_delay_after_add     = try(auto_scaler_profile.value.scale_down_delay_after_add, null)
+      scale_down_delay_after_delete  = try(auto_scaler_profile.value.scale_down_delay_after_delete, null)
+      scale_down_delay_after_failure = try(auto_scaler_profile.value.scale_down_delay_after_failure, null)
+      scan_interval                  = try(auto_scaler_profile.value.scan_interval, null)
+      scale_down_unneeded            = try(auto_scaler_profile.value.scale_down_unneeded, null)
+      scale_down_unready             = try(auto_scaler_profile.value.scale_down_unready, null)
+      skip_nodes_with_local_storage  = try(auto_scaler_profile.value.skip_nodes_with_local_storage, null)
+      skip_nodes_with_system_pods    = try(auto_scaler_profile.value.skip_nodes_with_system_pods, null)
     }
   }
 
