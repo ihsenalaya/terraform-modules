@@ -139,11 +139,8 @@ resource "azurerm_kubernetes_cluster" "this" {
       }
     }
 
- dynamic "upgrade_settings" {
-  for_each = try(each.value.priority, "Regular") == "Spot" ? [] : [1]
-  content {
-    max_surge = "33%"
-  }
+upgrade_settings {
+  max_surge = "33%"
 }
 
   tags = local.tags
