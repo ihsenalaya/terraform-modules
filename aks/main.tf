@@ -23,6 +23,9 @@ resource "azurerm_kubernetes_cluster" "this" {
   private_cluster_enabled = var.private_cluster_enabled
   private_dns_zone_id     = var.private_dns_zone_id  # null => géré par AKS
 
+  network_data_plane  = var.network_data_plane      # azure | cilium
+  network_plugin_mode = var.network_plugin_mode     # ex: "overlay"
+
   # API server access (si API publique et IPs autorisées)
   dynamic "api_server_access_profile" {
     for_each = length(var.api_server_authorized_ip_ranges) > 0 ? [1] : []
@@ -59,6 +62,7 @@ resource "azurerm_kubernetes_cluster" "this" {
     outbound_type     = try(var.network.outbound_type, null)     # loadBalancer | userDefinedRouting | managedNATGateway
     load_balancer_sku = try(var.network.load_balancer_sku, null)
     pod_cidr          = try(var.network.pod_cidr, null)
+    pod_subnet_id = try(var.network.pod_subnet_id, null)
     service_cidr      = try(var.network.service_cidr, null)
     dns_service_ip    = try(var.network.dns_service_ip, null)
 

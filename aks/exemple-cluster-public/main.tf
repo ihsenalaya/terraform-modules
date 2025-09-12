@@ -95,7 +95,8 @@ module "aks" {
   private_cluster_enabled         = false
   # public_network_access_enabled  = true   # (retiré en 4.x)
   api_server_authorized_ip_ranges = ["1.2.3.4/32"] # remplacez par votre IP publique
-
+  network_data_plane  = "azure"
+  network_plugin_mode = "overlay"
   identity = {
     type = "SystemAssigned"
   }

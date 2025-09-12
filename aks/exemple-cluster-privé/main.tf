@@ -91,7 +91,8 @@ module "aks" {
   private_cluster_enabled         = true
   private_dns_zone_id             = "System"      # ou l'ID d'une zone privée existante
   api_server_authorized_ip_ranges = []            # pas utilisé en privé
-
+  network_data_plane  = "azure"
+  network_plugin_mode = "overlay"
   identity = {
     type = "SystemAssigned"
   }
