@@ -61,7 +61,6 @@ resource "azurerm_kubernetes_cluster" "this" {
     outbound_type     = try(var.network.outbound_type, null)     # loadBalancer | userDefinedRouting | managedNATGateway
     load_balancer_sku = try(var.network.load_balancer_sku, null)
     pod_cidr          = try(var.network.pod_cidr, null)
-    pod_subnet_id = try(var.network.pod_subnet_id, null)
     
     dns_service_ip    = try(var.network.dns_service_ip, null)
 
