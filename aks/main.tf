@@ -89,7 +89,7 @@ resource "azurerm_kubernetes_cluster" "this" {
     max_count           = try(var.default_pool.max_count, null)
     max_pods            = try(var.default_pool.max_pods, null)
     orchestrator_version= try(var.default_pool.orchestrator_version, null)
-    vnet_subnet_id      = var.network.vnet_subnet_id
+    vnet_subnet_id      = contains(["azure","azure_overlay"], var.network.network_plugin) ? var.network.vnet_subnet_id : null
     zones               = try(var.default_pool.zones, null)
     os_disk_size_gb     = try(var.default_pool.os_disk_size_gb, null)
     os_disk_type        = try(var.default_pool.os_disk_type, null)

@@ -119,7 +119,7 @@ variable "network" {
     service_cidr       = optional(string)
     dns_service_ip     = optional(string)
     docker_bridge_cidr = optional(string)
-    vnet_subnet_id     = string # subnet pour le default node pool
+    vnet_subnet_id     = optional(string) # subnet pour le default node pool
 
 
     load_balancer_profile = optional(object({

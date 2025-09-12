@@ -8,59 +8,50 @@ terraform {
   }
 }
 
-
 provider "azurerm" {
   features {}
 }
 
-
 module "aks" {
+  # Garde ton chemin tel que dans ton exemple (racine /aks du repo).
   source = "git::https://github.com/ihsenalaya/terraform-modules.git//aks?ref=main"
 
+  name                = "aks-quickstart"
+  location            = "eastus"
+  resource_group_name = "ihsen"
+  dns_prefix          = "aksquick"
 
-  name                = "aks-public-demo"
-  location            = "westeurope"
-  resource_group_name = "rg-aks-public-demo"
-  dns_prefix          = "pubdemo"
+  # Pas d'ACR attaché, pas de monitoring -> rien de plus à déclarer
 
+  # Public (API exposée), pas d'IP autorisées spécifiques (tu peux ajouter plus tard)
+  private_cluster_enabled       = false
+  public_network_access_enabled = true
 
   identity = {
     type = "SystemAssigned"
   }
 
-
-  rbac = {
-    enabled                = true
-    managed_aad            = true
-    admin_group_object_ids = []
-    azure_rbac_enabled     = false
-  }
-
-
+  # Réseau minimal sans subnet ID -> KUBENET
   network = {
-    network_plugin    = "azure"
-    network_policy    = "azure"
-    vnet_subnet_id    = "/subscriptions/0000/resourceGroups/rg-network/providers/Microsoft.Network/virtualNetworks/vnet/sharedSubnets/snet-aks"
-    service_cidr      = "10.2.0.0/16"
-    dns_service_ip    = "10.2.0.10"
+    network_plugin    = "kubenet"
+    network_policy    = null
+    service_cidr      = "10.20.0.0/16"
+    dns_service_ip    = "10.20.0.10"
     pod_cidr          = null
     load_balancer_sku = "standard"
   }
 
-
+  # Pool système minimal
   default_pool = {
-    vm_size   = "Standard_D4s_v5"
-    min_count = 1
-    max_count = 1
-  }
-
-
-  node_pools = {
-    userlinux = {
-      vm_size     = "Standard_D4s_v5"
-      min_count   = 0
-      max_count   = 1
-      node_labels = { purpose = "apps" }
-    }
+    vm_size             = "Standard_D4s_v5"
+    enable_auto_scaling = true
+    min_count           = 1
+    max_count           = 2
   }
 }
+
+# Sorties utiles
+output "aks_id"               { value = module.aks.id }
+output "aks_name"             { value = module.aks.name }
+output "aks_fqdn"             { value = module.aks.fqdn }
+output "aks_oidc_issuer_url"  { value = module.aks.oidc_issuer_url }
