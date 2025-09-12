@@ -193,9 +193,13 @@ dynamic "key_vault_secrets_provider" {
 # ---------------------------------------------------------------------------
 resource "azurerm_kubernetes_cluster_node_pool" "extra" {
   for_each              = var.node_pools
-  name                  = each.key
+ 
   kubernetes_cluster_id = azurerm_kubernetes_cluster.this.id
-
+name = substr(
+  regexreplace("np${lower(each.key)}", "[^a-z0-9]", ""),
+  0,
+  12
+)
   vm_size              = each.value.vm_size
   mode                 = try(each.value.mode, "User")
   node_count           = try(each.value.node_count, null)
@@ -263,8 +267,9 @@ resource "azurerm_kubernetes_cluster_node_pool" "extra" {
 # Optionnel : ACR pull (si un ACR est fourni)
 # ---------------------------------------------------------------------------
 resource "azurerm_role_assignment" "acr_pull" {
-  count                = var.attach_acr_id == null ? 0 : 1
-  scope                = var.attach_acr_id
+  count                = var.attach_acr ? 1 : 0
+  scope                = var.attach_acr_id                    # peut être inconnu au plan
   role_definition_name = "AcrPull"
   principal_id         = azurerm_kubernetes_cluster.this.kubelet_identity[0].object_id
 }
+

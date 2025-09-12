@@ -265,3 +265,9 @@ variable "attach_acr_id" {
   type        = string
   default     = null
 }
+
+variable "attach_acr" {
+  description = "Créer l'assignation AcrPull pour l'identité kubelet"
+  type        = bool
+  default     = false
+}
