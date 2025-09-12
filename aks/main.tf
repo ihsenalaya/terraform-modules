@@ -195,49 +195,6 @@ resource "azurerm_kubernetes_cluster" "this" {
 # ---------------------------------------------------------------------------
 # Node Pools additionnels (User/System)
 # ---------------------------------------------------------------------------
-resource "azurerm_kubernetes_cluster_node_pool" "extra" {
-  for_each              = var.node_pools
-  name                  = each.key
-  kubernetes_cluster_id = azurerm_kubernetes_cluster.this.id
-
-  vm_size              = each.value.vm_size
-  mode                 = try(each.value.mode, "User")
-  node_count           = try(each.value.node_count, null)
-  auto_scaling_enabled = try(each.value.auto_scaling_enabled, true)
-  min_count            = try(each.value.min_count, null)
-  max_count            = try(each.value.max_count, null)
-
-  os_type  = try(each.value.os_type, "Linux")
-  max_pods = try(each.value.max_pods, null)
-
-  vnet_subnet_id = try(each.value.vnet_subnet_id, null)
-
-  zones                 = try(each.value.zones, null)
-  node_labels           = try(each.value.node_labels, null)
-  node_taints           = try(each.value.node_taints, null)   # OK sur pools extra
-  orchestrator_version  = try(each.value.orchestrator_version, null)
-  os_disk_size_gb       = try(each.value.os_disk_size_gb, null)
-  os_disk_type          = try(each.value.os_disk_type, null)
-
-  priority        = try(each.value.priority, null)            # Regular | Spot
-  eviction_policy = try(each.value.eviction_policy, null)     # Delete | Deallocate
-  spot_max_price  = try(each.value.spot_max_price, null)
-
-  enable_ultra_ssd = try(each.value.enable_ultra_ssd, null)
-
-  dynamic "kubelet_config" {
-    for_each = try(each.value.kubelet_config, null) == null ? [] : [each.value.kubelet_config]
-    content {
-      cpu_manager_policy      = try(kubelet_config.value.cpu_manager_policy, null)
-      cpu_cfs_quota_enabled   = try(kubelet_config.value.cpu_cfs_quota_enabled, null)
-      cpu_cfs_quota_period    = try(kubelet_config.value.cpu_cfs_quota_period, null)
-      image_gc_high_threshold = try(kubelet_config.value.image_gc_high_threshold, null)
-      image_gc_low_threshold  = try(kubelet_config.value.image_gc_low_threshold, null)
-      pod_max_pid             = try(kubelet_config.value.pod_max_pid, null) # renommé
-      topology_manager_policy = try(kubelet_config.value.topology_manager_policy, null)
-    }
-  }
-
   dynamic "linux_os_config" {
     for_each = try(each.value.linux_os_config, null) == null ? [] : [each.value.linux_os_config]
     content {
