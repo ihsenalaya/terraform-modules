@@ -1,6 +1,6 @@
 module "aks" {
   # Si le module est dans un sous-dossier du repo: utilisez //modules/aks
-  source = "git::https://github.com/ihsenalaya/terraform-modules.git//modules/aks?ref=main"
+  source = "git::https://github.com/ihsenalaya/terraform-modules.git//aks?ref=main"
 
   name                = "${local.prefix}-public"
   location            = azurerm_resource_group.rg.location

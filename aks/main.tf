@@ -8,7 +8,9 @@ terraform {
   }
 }
 
-provider "azurerm" { features {} }
+provider "azurerm" { 
+  features {} 
+  }
 
 # NOTE: Ce module suppose que le Resource Group existe déjà et est créé par un autre module.
 # Renseignez simplement `var.resource_group_name` avec le nom du RG existant.
