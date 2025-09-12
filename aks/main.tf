@@ -196,7 +196,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "extra" {
  
   kubernetes_cluster_id = azurerm_kubernetes_cluster.this.id
 name = substr(
-  regexreplace("np${lower(each.key)}", "[^a-z0-9]", ""),
+  replace("np${lower(each.key)}", "/[^a-z0-9]/", ""),
   0,
   12
 )
