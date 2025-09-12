@@ -1,1 +1,0 @@
-{"Modules":[{"Key":"","Source":"","Dir":"."},{"Key":"aks","Source":"git::https://github.com/ihsenalaya/terraform-modules.git//aks?ref=main","Dir":".terraform/modules/aks/aks"}]}
