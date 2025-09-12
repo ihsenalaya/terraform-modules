@@ -5,13 +5,23 @@ terraform {
       source  = "hashicorp/azurerm"
       version = ">= 4.44.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.6.2"
+    }
   }
+}
+
+resource "random_string" "acr" {
+  length  = 5
+  upper   = false
+  numeric = true
+  special = false
 }
 
 provider "azurerm" {
   features {}
 }
-
 # ---------------------------
 # Infra de test (RG, VNet, Subnet, ACR, Log Analytics)
 # ---------------------------
@@ -56,13 +66,14 @@ resource "azurerm_log_analytics_workspace" "law" {
 }
 
 resource "azurerm_container_registry" "acr" {
-  name                = replace("${local.prefix}acr", "-", "")
+  name                = substr(lower(replace("${local.prefix}acr${random_string.acr.result}", "-", "")), 0, 50)
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   sku                 = "Basic"
   admin_enabled       = false
   tags                = local.tags
 }
+
 
 module "aks" {
   # même source
