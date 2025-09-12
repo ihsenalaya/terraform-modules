@@ -142,7 +142,7 @@ resource "azurerm_kubernetes_cluster" "this" {
             net_core_rmem_max           = try(sysctl_config.value.net_core_rmem_max, null)
             net_core_wmem_default       = try(sysctl_config.value.net_core_wmem_default, null)
             net_core_wmem_max           = try(sysctl_config.value.net_core_wmem_max, null)
-            net_ipv4_tcp_tw_recycle     = try(sysctl_config.value.net_ipv4_tcp_tw_recycle, null)
+            # net_ipv4_tcp_tw_recycle     = try(sysctl_config.value.net_ipv4_tcp_tw_recycle, null)
             vm_max_map_count            = try(sysctl_config.value.vm_max_map_count, null)
           }
         }
@@ -189,7 +189,7 @@ resource "azurerm_kubernetes_cluster" "this" {
     content {}
   }
 
-  automatic_channel_upgrade = var.automatic_channel_upgrade
+#  automatic_channel_upgrade = var.automatic_channel_upgrade
 
   tags = local.tags
 }
