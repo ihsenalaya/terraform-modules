@@ -3,27 +3,21 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = ">= 3.100.0"
+      version = ">= 4.44.0"
     }
   }
 }
 
-provider "azurerm" { 
-  features {} 
-  }
-
-# NOTE: Ce module suppose que le Resource Group existe déjà et est créé par un autre module.
-# Renseignez simplement `var.resource_group_name` avec le nom du RG existant.
-
 locals {
   tags = merge({
-    "managed-by" = "terraform",
+    "managed-by" = "terraform"
     "module"     = "aks-generic"
   }, var.tags)
 }
 
-
-# AKS cluster
+# ---------------------------------------------------------------------------
+# AKS Cluster (compatible azurerm >= 4.44.0)
+# ---------------------------------------------------------------------------
 resource "azurerm_kubernetes_cluster" "this" {
   name                = var.name
   location            = var.location
@@ -33,11 +27,11 @@ resource "azurerm_kubernetes_cluster" "this" {
   kubernetes_version  = var.kubernetes_version
   sku_tier            = var.sku_tier
 
-  node_resource_group = var.node_resource_group_name
+  node_resource_group   = var.node_resource_group_name
+  private_cluster_enabled = var.private_cluster_enabled
+  private_dns_zone_id     = var.private_dns_zone_id  # null => géré par AKS
 
-  private_cluster_enabled        = var.private_cluster_enabled
-  public_network_access_enabled  = var.public_network_access_enabled
-
+  # API server access (si API publique et IPs autorisées)
   dynamic "api_server_access_profile" {
     for_each = length(var.api_server_authorized_ip_ranges) > 0 ? [1] : []
     content {
@@ -45,75 +39,82 @@ resource "azurerm_kubernetes_cluster" "this" {
     }
   }
 
-  # Zones privées personnalisées (si fourni)
-  private_dns_zone_id = var.private_dns_zone_id
-
+  # Identity
   identity {
-    type         = var.identity.type
+    type         = var.identity.type              # SystemAssigned | UserAssigned
     identity_ids = try(var.identity.identity_ids, null)
   }
 
+  # RBAC / Entra ID (AAD) — plus de 'managed' en 4.x
   role_based_access_control_enabled = var.rbac.enabled
-
   dynamic "azure_active_directory_role_based_access_control" {
     for_each = var.rbac.enabled ? [1] : []
     content {
-      managed                = try(var.rbac.managed_aad, true)
-      admin_group_object_ids = try(var.rbac.admin_group_object_ids, [])
-      azure_rbac_enabled     = try(var.rbac.azure_rbac_enabled, false)
+      tenant_id              = try(var.rbac.tenant_id, null)
+      admin_group_object_ids = try(var.rbac.admin_group_object_ids, null)
+      azure_rbac_enabled     = try(var.rbac.azure_rbac_enabled, null)
     }
   }
 
+  # OIDC / Workload Identity
   oidc_issuer_enabled       = try(var.workload_identity.oidc_issuer_enabled, true)
   workload_identity_enabled = try(var.workload_identity.workload_identity_enabled, true)
 
+  # Network profile (4.x : pas de docker_bridge_cidr)
   network_profile {
-    network_plugin     = var.network.network_plugin
-    network_policy     = try(var.network.network_policy, null)
-    outbound_type      = try(var.network.outbound_type, null)
-    load_balancer_sku  = try(var.network.load_balancer_sku, null)
-    pod_cidr           = try(var.network.pod_cidr, null)
-    service_cidr       = try(var.network.service_cidr, null)
-    dns_service_ip     = try(var.network.dns_service_ip, null)
-    docker_bridge_cidr = try(var.network.docker_bridge_cidr, null)
+    network_plugin    = var.network.network_plugin               # kubenet | azure | azure_overlay
+    network_policy    = try(var.network.network_policy, null)
+    outbound_type     = try(var.network.outbound_type, null)     # loadBalancer | userDefinedRouting | managedNATGateway
+    load_balancer_sku = try(var.network.load_balancer_sku, null)
+    pod_cidr          = try(var.network.pod_cidr, null)
+    service_cidr      = try(var.network.service_cidr, null)
+    dns_service_ip    = try(var.network.dns_service_ip, null)
 
     dynamic "load_balancer_profile" {
       for_each = try(var.network.load_balancer_profile, null) == null ? [] : [var.network.load_balancer_profile]
       content {
-        idle_timeout_in_minutes  = try(load_balancer_profile.value.idle_timeout_in_minutes, null)
-        managed_outbound_ip_count = try(load_balancer_profile.value.managed_outbound_ip_count, null)
-        outbound_ip_prefix_ids    = try(load_balancer_profile.value.outbound_ip_prefix_ids, null)
-        outbound_ip_address_ids   = try(load_balancer_profile.value.outbound_ip_address_ids, null)
-        allocated_outbound_ports  = try(load_balancer_profile.value.allocated_outbound_ports, null)
+        managed_outbound_ip_count   = try(load_balancer_profile.value.managed_outbound_ip_count, null)
+        managed_outbound_ipv6_count = try(load_balancer_profile.value.managed_outbound_ipv6_count, null)
+        outbound_ip_prefix_ids      = try(load_balancer_profile.value.outbound_ip_prefix_ids, null)
+        outbound_ip_address_ids     = try(load_balancer_profile.value.outbound_ip_address_ids, null)
+        outbound_ports_allocated    = try(load_balancer_profile.value.outbound_ports_allocated, null) # (ex-allocated_outbound_ports)
+        idle_timeout_in_minutes     = try(load_balancer_profile.value.idle_timeout_in_minutes, null)
       }
     }
 
     dynamic "nat_gateway_profile" {
       for_each = try(var.network.nat_gateway_profile, null) == null ? [] : [var.network.nat_gateway_profile]
       content {
-        idle_timeout_in_minutes  = try(nat_gateway_profile.value.idle_timeout_in_minutes, null)
         managed_outbound_ip_count = try(nat_gateway_profile.value.managed_outbound_ip_count, null)
+        idle_timeout_in_minutes   = try(nat_gateway_profile.value.idle_timeout_in_minutes, null)
       }
     }
   }
 
+  # Default node pool (4.x : auto_scaling_enabled ; pas de node_taints ici)
   default_node_pool {
-    name                = try(var.default_pool.name, "system")
-    vm_size             = var.default_pool.vm_size
-    enable_auto_scaling = try(var.default_pool.enable_auto_scaling, true)
-    node_count          = try(var.default_pool.node_count, null)
-    min_count           = try(var.default_pool.min_count, null)
-    max_count           = try(var.default_pool.max_count, null)
-    max_pods            = try(var.default_pool.max_pods, null)
-    orchestrator_version= try(var.default_pool.orchestrator_version, null)
-    vnet_subnet_id      = try(var.network.vnet_subnet_id, null)
-    zones               = try(var.default_pool.zones, null)
-    os_disk_size_gb     = try(var.default_pool.os_disk_size_gb, null)
-    os_disk_type        = try(var.default_pool.os_disk_type, null)
-    node_labels         = try(var.default_pool.node_labels, null)
-    node_taints         = try(var.default_pool.node_taints, null)
-    fips_enabled        = try(var.default_pool.fips_enabled, null)
-    ultra_ssd_enabled   = try(var.default_pool.ultra_ssd_enabled, null)
+    name       = try(var.default_pool.name, "system")
+    vm_size    = var.default_pool.vm_size
+    node_count = try(var.default_pool.node_count, null)
+
+    auto_scaling_enabled = try(var.default_pool.auto_scaling_enabled, true)
+    min_count            = try(var.default_pool.min_count, null)
+    max_count            = try(var.default_pool.max_count, null)
+    max_pods             = try(var.default_pool.max_pods, null)
+
+    orchestrator_version = try(var.default_pool.orchestrator_version, null)
+
+    # Subnet uniquement si CNI Azure/Overlay
+    vnet_subnet_id = contains(["azure", "azure_overlay"], var.network.network_plugin)
+      ? try(var.network.vnet_subnet_id, null)
+      : null
+
+    zones             = try(var.default_pool.zones, null)
+    os_disk_size_gb   = try(var.default_pool.os_disk_size_gb, null)
+    os_disk_type      = try(var.default_pool.os_disk_type, null)
+    node_labels       = try(var.default_pool.node_labels, null)
+    fips_enabled      = try(var.default_pool.fips_enabled, null)
+    ultra_ssd_enabled = try(var.default_pool.ultra_ssd_enabled, null)
 
     dynamic "kubelet_config" {
       for_each = try(var.default_pool.kubelet_config, null) == null ? [] : [var.default_pool.kubelet_config]
@@ -123,7 +124,7 @@ resource "azurerm_kubernetes_cluster" "this" {
         cpu_cfs_quota_period    = try(kubelet_config.value.cpu_cfs_quota_period, null)
         image_gc_high_threshold = try(kubelet_config.value.image_gc_high_threshold, null)
         image_gc_low_threshold  = try(kubelet_config.value.image_gc_low_threshold, null)
-        pod_max_pids            = try(kubelet_config.value.pod_max_pids, null)
+        pod_max_pid             = try(kubelet_config.value.pod_max_pid, null) # (ex pod_max_pids)
         topology_manager_policy = try(kubelet_config.value.topology_manager_policy, null)
       }
     }
@@ -142,20 +143,18 @@ resource "azurerm_kubernetes_cluster" "this" {
             net_core_rmem_max           = try(sysctl_config.value.net_core_rmem_max, null)
             net_core_wmem_default       = try(sysctl_config.value.net_core_wmem_default, null)
             net_core_wmem_max           = try(sysctl_config.value.net_core_wmem_max, null)
-            net_ipv4_tcp_tw_recycle     = try(sysctl_config.value.net_ipv4_tcp_tw_recycle, null)
             vm_max_map_count            = try(sysctl_config.value.vm_max_map_count, null)
           }
         }
       }
     }
 
-    upgrade_settings {
-      max_surge = "33%"
-    }
+    upgrade_settings { max_surge = "33%" }
   }
 
+  # Cluster Autoscaler (niveau cluster)
   dynamic "auto_scaler_profile" {
-    for_each = length(keys(var.auto_scaler_profile)) > 0 ? [var.auto_scaler_profile] : []
+    for_each = var.auto_scaler_profile == null ? [] : [var.auto_scaler_profile]
     content {
       balance_similar_node_groups    = try(auto_scaler_profile.value.balance_similar_node_groups, null)
       expander                       = try(auto_scaler_profile.value.expander, null)
@@ -175,6 +174,7 @@ resource "azurerm_kubernetes_cluster" "this" {
     }
   }
 
+  # Add-ons
   dynamic "oms_agent" {
     for_each = try(var.monitoring.enable_oms_agent, false) ? [1] : []
     content {
@@ -189,36 +189,43 @@ resource "azurerm_kubernetes_cluster" "this" {
     content {}
   }
 
-  automatic_channel_upgrade = var.automatic_channel_upgrade
+  # NOTE: 'automatic_channel_upgrade' retiré en 4.x du provider => ne pas utiliser ici.
 
   tags = local.tags
 }
 
-# Pools additionnels
+# ---------------------------------------------------------------------------
+# Node Pools additionnels (User/System)
+# ---------------------------------------------------------------------------
 resource "azurerm_kubernetes_cluster_node_pool" "extra" {
   for_each              = var.node_pools
   name                  = each.key
   kubernetes_cluster_id = azurerm_kubernetes_cluster.this.id
 
-  vm_size             = each.value.vm_size
-  mode                = try(each.value.mode, "User")
-  enable_auto_scaling = try(each.value.enable_auto_scaling, true)
-  node_count          = try(each.value.node_count, null)
-  min_count           = try(each.value.min_count, null)
-  max_count           = try(each.value.max_count, null)
-  os_type             = try(each.value.os_type, "Linux")
-  max_pods            = try(each.value.max_pods, null)
-  vnet_subnet_id      = try(each.value.vnet_subnet_id, null)
-  zones               = try(each.value.zones, null)
-  node_labels         = try(each.value.node_labels, null)
-  node_taints         = try(each.value.node_taints, null)
-  orchestrator_version= try(each.value.orchestrator_version, null)
-  os_disk_size_gb     = try(each.value.os_disk_size_gb, null)
-  os_disk_type        = try(each.value.os_disk_type, null)
-  priority            = try(each.value.priority, null)
-  eviction_policy     = try(each.value.eviction_policy, null)
-  spot_max_price      = try(each.value.spot_max_price, null)
-  enable_ultra_ssd    = try(each.value.enable_ultra_ssd, null)
+  vm_size              = each.value.vm_size
+  mode                 = try(each.value.mode, "User")
+  node_count           = try(each.value.node_count, null)
+  auto_scaling_enabled = try(each.value.auto_scaling_enabled, true)
+  min_count            = try(each.value.min_count, null)
+  max_count            = try(each.value.max_count, null)
+
+  os_type  = try(each.value.os_type, "Linux")
+  max_pods = try(each.value.max_pods, null)
+
+  vnet_subnet_id = try(each.value.vnet_subnet_id, null)
+
+  zones                 = try(each.value.zones, null)
+  node_labels           = try(each.value.node_labels, null)
+  node_taints           = try(each.value.node_taints, null)   # OK sur pools extra
+  orchestrator_version  = try(each.value.orchestrator_version, null)
+  os_disk_size_gb       = try(each.value.os_disk_size_gb, null)
+  os_disk_type          = try(each.value.os_disk_type, null)
+
+  priority        = try(each.value.priority, null)            # Regular | Spot
+  eviction_policy = try(each.value.eviction_policy, null)     # Delete | Deallocate
+  spot_max_price  = try(each.value.spot_max_price, null)
+
+  enable_ultra_ssd = try(each.value.enable_ultra_ssd, null)
 
   dynamic "kubelet_config" {
     for_each = try(each.value.kubelet_config, null) == null ? [] : [each.value.kubelet_config]
@@ -228,7 +235,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "extra" {
       cpu_cfs_quota_period    = try(kubelet_config.value.cpu_cfs_quota_period, null)
       image_gc_high_threshold = try(kubelet_config.value.image_gc_high_threshold, null)
       image_gc_low_threshold  = try(kubelet_config.value.image_gc_low_threshold, null)
-      pod_max_pids            = try(kubelet_config.value.pod_max_pids, null)
+      pod_max_pid             = try(kubelet_config.value.pod_max_pid, null) # renommé
       topology_manager_policy = try(kubelet_config.value.topology_manager_policy, null)
     }
   }
@@ -247,25 +254,23 @@ resource "azurerm_kubernetes_cluster_node_pool" "extra" {
           net_core_rmem_max           = try(sysctl_config.value.net_core_rmem_max, null)
           net_core_wmem_default       = try(sysctl_config.value.net_core_wmem_default, null)
           net_core_wmem_max           = try(sysctl_config.value.net_core_wmem_max, null)
-          net_ipv4_tcp_tw_recycle     = try(sysctl_config.value.net_ipv4_tcp_tw_recycle, null)
           vm_max_map_count            = try(sysctl_config.value.vm_max_map_count, null)
         }
       }
     }
   }
 
-  upgrade_settings {
-    max_surge = "33%"
-  }
+  upgrade_settings { max_surge = "33%" }
 
   tags = local.tags
 }
 
-# Attribution du rôle AcrPull à l'identité kubelet (si demandé)
+# ---------------------------------------------------------------------------
+# Optionnel : ACR pull (si un ACR est fourni)
+# ---------------------------------------------------------------------------
 resource "azurerm_role_assignment" "acr_pull" {
   count                = var.attach_acr_id == null ? 0 : 1
   scope                = var.attach_acr_id
   role_definition_name = "AcrPull"
   principal_id         = azurerm_kubernetes_cluster.this.kubelet_identity[0].object_id
 }
-

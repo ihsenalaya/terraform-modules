@@ -68,7 +68,7 @@ module "aks" {
 
   # Réseau & API
   private_cluster_enabled        = false
-  public_network_access_enabled  = true
+ # public_network_access_enabled  = true
   api_server_authorized_ip_ranges = ["1.2.3.4/32"] # remplacez par votre IP publique
 
   identity = {
