@@ -103,7 +103,6 @@ variable "network" {
     service_cidr            = optional(string)
     dns_service_ip          = optional(string)
     vnet_subnet_id          = optional(string)            # requis si Azure CNI/Overlay
-    pod_subnet_id           = optional(string)
 
     load_balancer_profile = optional(object({
       managed_outbound_ip_count   = optional(number)
@@ -120,17 +119,7 @@ variable "network" {
     }))
   })
 }
-variable "network_data_plane" {
-  description = "Dataplane: azure | cilium"
-  type        = string
-  default     = null
-}
 
-variable "network_plugin_mode" {
-  description = "Plugin mode (ex: overlay pour Azure CNI Overlay)"
-  type        = string
-  default     = null
-}
 variable "auto_scaler_profile" {
   description = "Réglages globaux du Cluster Autoscaler"
   type = object({
