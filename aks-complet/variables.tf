@@ -200,7 +200,7 @@ variable "node_pools" {
     priority              = optional(string)        # Regular | Spot
     eviction_policy       = optional(string)        # Delete | Deallocate
     spot_max_price        = optional(number)
-    enable_ultra_ssd      = optional(bool)
+    ultra_ssd_enabled     = optional(bool)  
 
     kubelet_config = optional(object({
       cpu_manager_policy      = optional(string)

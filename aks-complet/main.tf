@@ -273,7 +273,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "extra" {
   eviction_policy = try(each.value.eviction_policy, null) # Delete | Deallocate
   spot_max_price  = try(each.value.spot_max_price, null)
 
-  enable_ultra_ssd = try(each.value.enable_ultra_ssd, null)
+    ultra_ssd_enabled = try(each.value.ultra_ssd_enabled, null)
 
   dynamic "kubelet_config" {
     for_each = try(each.value.kubelet_config, null) == null ? [] : [each.value.kubelet_config]
