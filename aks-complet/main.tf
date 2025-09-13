@@ -59,9 +59,6 @@ resource "azurerm_kubernetes_cluster" "this" {
   oidc_issuer_enabled       = try(var.workload_identity.oidc_issuer_enabled, true)
   workload_identity_enabled = try(var.workload_identity.workload_identity_enabled, true)
 
-  # Réseau (CNI/Overlay/Cilium/Advanced)
-  network_data_plane  = var.network_data_plane           # azure | cilium
-  network_plugin_mode = var.network_plugin_mode          # ex: "overlay"
 
 network_profile {
   network_plugin      = var.network.network_plugin
