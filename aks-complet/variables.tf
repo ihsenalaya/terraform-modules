@@ -153,6 +153,8 @@ variable "default_pool" {
     fips_enabled          = optional(bool)
     ultra_ssd_enabled     = optional(bool)
     node_labels           = optional(map(string))
+    vnet_subnet_id  = optional(string)
+    pod_subnet_id   = optional(string)
 
     kubelet_config = optional(object({
       cpu_manager_policy      = optional(string)
@@ -205,6 +207,8 @@ variable "node_pools" {
     eviction_policy       = optional(string)        # Delete | Deallocate
     spot_max_price        = optional(number)
     enable_ultra_ssd      = optional(bool)
+    vnet_subnet_id  = optional(string)
+    pod_subnet_id   = optional(string)
 
     kubelet_config = optional(object({
       cpu_manager_policy      = optional(string)

@@ -113,8 +113,8 @@ network_profile {
     orchestrator_version  = try(var.default_pool.orchestrator_version, null)
 
     # Subnets (CNI/advanced)
-    vnet_subnet_id = try(var.network.vnet_subnet_id, null)
-    pod_subnet_id  = try(var.network.pod_subnet_id, null)
+  vnet_subnet_id       = try(var.default_pool.vnet_subnet_id, null)  # <- ICI
+  pod_subnet_id        = try(var.default_pool.pod_subnet_id, null)
 
     zones             = try(var.default_pool.zones, null)
     os_disk_size_gb   = try(var.default_pool.os_disk_size_gb, null)
@@ -225,14 +225,16 @@ network_profile {
   }
 
   # Istio-based service mesh add-on
-  dynamic "service_mesh_profile" {
-    for_each = var.service_mesh == null ? [] : [var.service_mesh]
-    content {
-      mode                           = "Istio"
-      internal_ingress_gateway_enabled = try(service_mesh_profile.value.internal_ingress_gateway_enabled, null)
-      external_ingress_gateway_enabled = try(service_mesh_profile.value.external_ingress_gateway_enabled, null)
-    }
+dynamic "service_mesh_profile" {
+  for_each = var.service_mesh == null ? [] : [var.service_mesh]
+  content {
+    mode                               = try(service_mesh_profile.value.mode, "Istio")
+    revisions                          = service_mesh_profile.value.revisions  # ex: ["asm-1-23"]
+    internal_ingress_gateway_enabled   = try(service_mesh_profile.value.internal_ingress_gateway_enabled, null)
+    external_ingress_gateway_enabled   = try(service_mesh_profile.value.external_ingress_gateway_enabled, null)
   }
+}
+
 
   # Disk Encryption Set pour les nœuds/volumes
   disk_encryption_set_id = var.disk_encryption_set_id
