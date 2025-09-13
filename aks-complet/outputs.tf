@@ -42,8 +42,3 @@ output "kubelet_identity_object_id" {
   value       = try(azurerm_kubernetes_cluster.this.kubelet_identity[0].object_id, null)
   description = "Object ID de l'identité kubelet"
 }
-
-output "key_vault_secrets_provider" {
-  value     = try(azurerm_kubernetes_cluster.this.key_vault_secrets_provider, null)
-  sensitive = true
-}

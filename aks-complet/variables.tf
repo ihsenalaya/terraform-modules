@@ -1,43 +1,15 @@
-variable "name" {
-  type = string
-}
+variable "name" { type = string }
+variable "location" { type = string }
+variable "resource_group_name" { type = string }
+variable "dns_prefix" { type = string }
 
-variable "location" {
-  type = string
-}
+variable "kubernetes_version" { type = string, default = null }
+variable "sku_tier" { type = string, default = "Free" }
 
-variable "resource_group_name" {
-  type = string
-}
+variable "node_resource_group_name" { type = string, default = null }
 
-variable "dns_prefix" {
-  type = string
-}
-
-variable "kubernetes_version" {
-  type    = string
-  default = null
-}
-
-variable "sku_tier" {
-  type    = string
-  default = "Free" # Free | Paid
-}
-
-variable "node_resource_group_name" {
-  type    = string
-  default = null
-}
-
-variable "private_cluster_enabled" {
-  type    = bool
-  default = false
-}
-
-variable "private_dns_zone_id" {
-  type    = string
-  default = null # "System" | zone ID | null
-}
+variable "private_cluster_enabled" { type = bool, default = false }
+variable "private_dns_zone_id"     { type = string, default = null }
 
 variable "api_server_authorized_ip_ranges" {
   type    = list(string)
@@ -47,7 +19,7 @@ variable "api_server_authorized_ip_ranges" {
 variable "identity" {
   type = object({
     type         = string                 # SystemAssigned | UserAssigned
-    identity_ids = optional(list(string)) # requis si UserAssigned
+    identity_ids = optional(list(string))
   })
 }
 
@@ -59,9 +31,7 @@ variable "rbac" {
     azure_rbac_enabled     = optional(bool)
     local_account_disabled = optional(bool)
   })
-  default = {
-    enabled = true
-  }
+  default = { enabled = true }
 }
 
 variable "workload_identity" {
@@ -85,18 +55,16 @@ variable "network_plugin_mode" {
   default     = null
 }
 
-# Réseau
+# Réseau (NB: vnet_subnet_id/pod_subnet_id sont sur les pools)
 variable "network" {
   type = object({
-    network_plugin    = string                            # azure | kubenet | azure_overlay
-    network_policy    = optional(string)                  # azure | calico | cilium
-    outbound_type     = optional(string)                  # loadBalancer | userDefinedRouting | managedNATGateway
+    network_plugin    = string
+    network_policy    = optional(string)
+    outbound_type     = optional(string)
     load_balancer_sku = optional(string, "standard")
-    pod_cidr          = optional(string)                  # requis pour overlay
+    pod_cidr          = optional(string)      # requis en overlay
     service_cidr      = optional(string)
     dns_service_ip    = optional(string)
-    vnet_subnet_id    = optional(string)                  # subnet des NODES
-    pod_subnet_id     = optional(string)                  # subnet des PODS (advanced)
 
     load_balancer_profile = optional(object({
       managed_outbound_ip_count   = optional(number)
@@ -125,8 +93,8 @@ variable "auto_scaler_profile" {
     max_unready_percentage         = optional(number)
     new_pod_scale_up_delay         = optional(string)
     scale_down_delay_after_add     = optional(string)
-    scale_down_delay_after_delete  = optional(string)
-    scale_down_delay_after_failure = optional(string)
+    scale_down_after_delete        = optional(string)
+    scale_down_after_failure       = optional(string)
     scale_down_unneeded            = optional(string)
     scale_down_unready             = optional(string)
     scan_interval                  = optional(string)
@@ -153,8 +121,10 @@ variable "default_pool" {
     fips_enabled          = optional(bool)
     ultra_ssd_enabled     = optional(bool)
     node_labels           = optional(map(string))
-    vnet_subnet_id  = optional(string)
-    pod_subnet_id   = optional(string)
+
+    # BYO VNet / Advanced
+    vnet_subnet_id        = optional(string)
+    pod_subnet_id         = optional(string)
 
     kubelet_config = optional(object({
       cpu_manager_policy      = optional(string)
@@ -195,8 +165,8 @@ variable "node_pools" {
     max_count             = optional(number)
     max_pods              = optional(number)
     os_type               = optional(string, "Linux")
-    vnet_subnet_id        = optional(string)
-    pod_subnet_id         = optional(string)
+    vnet_subnet_id        = optional(string)   # nodes subnet
+    pod_subnet_id         = optional(string)   # pods subnet (Advanced)
     zones                 = optional(list(string))
     node_labels           = optional(map(string))
     node_taints           = optional(list(string))
@@ -207,8 +177,6 @@ variable "node_pools" {
     eviction_policy       = optional(string)        # Delete | Deallocate
     spot_max_price        = optional(number)
     enable_ultra_ssd      = optional(bool)
-    vnet_subnet_id  = optional(string)
-    pod_subnet_id   = optional(string)
 
     kubelet_config = optional(object({
       cpu_manager_policy      = optional(string)
@@ -237,7 +205,7 @@ variable "node_pools" {
   default = {}
 }
 
-# Add-ons / Monitoring
+# Monitoring / Add-ons
 variable "monitoring" {
   type = object({
     enable_oms_agent            = optional(bool, false)
@@ -245,8 +213,8 @@ variable "monitoring" {
     azure_policy_enabled        = optional(bool, false)
 
     enable_kv_secrets_provider  = optional(bool, false)
-    kv_secret_rotation_enabled  = optional(bool)   # au moins un des deux si activé
-    kv_secret_rotation_interval = optional(string) # ex "2m"
+    kv_secret_rotation_enabled  = optional(bool)
+    kv_secret_rotation_interval = optional(string)
   })
   default = {}
 }
@@ -271,16 +239,18 @@ variable "kms" {
   default = null
 }
 
-# Istio service mesh (optionnel)
+# Istio add-on
 variable "service_mesh" {
   type = object({
+    mode                             = optional(string, "Istio")
     internal_ingress_gateway_enabled = optional(bool)
     external_ingress_gateway_enabled = optional(bool)
+    revisions                        = optional(list(string)) # requis si activé
   })
   default = null
 }
 
-# Disk Encryption Set
+# DES
 variable "disk_encryption_set_id" {
   type    = string
   default = null
@@ -288,15 +258,12 @@ variable "disk_encryption_set_id" {
 
 # ACR
 variable "attach_acr" {
-  description = "Créer l'assignation AcrPull pour l'identité kubelet"
-  type        = bool
-  default     = false
+  type    = bool
+  default = false
 }
-
 variable "attach_acr_id" {
-  description = "ID de l'ACR (scope) à attacher"
-  type        = string
-  default     = null
+  type    = string
+  default = null
 }
 
 variable "tags" {
