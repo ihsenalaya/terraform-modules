@@ -1,5 +1,85 @@
+terraform {
+  required_version = ">= 1.6.0"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = ">= 4.44.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.6.2"
+    }
+  }
+}
+
+provider "azurerm" {
+  features {}
+}
+
+# ---------- Locaux ----------
+locals {
+  location = "westeurope"
+  prefix   = "demo-aks"
+  tags = {
+    env   = "playground"
+    owner = "ihsen"
+  }
+}
+
+# ---------- Suffixe aléatoire pour ACR ----------
+resource "random_string" "acr" {
+  length  = 5
+  upper   = false
+  numeric = true
+  special = false
+}
+
+# ---------- Infra de test ----------
+resource "azurerm_resource_group" "rg" {
+  name     = "${local.prefix}-rg"
+  location = local.location
+  tags     = local.tags
+}
+
+resource "azurerm_virtual_network" "vnet" {
+  name                = "${local.prefix}-vnet"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  address_space       = ["10.10.0.0/16"]
+  tags                = local.tags
+}
+
+resource "azurerm_subnet" "snet_aks" {
+  name                 = "snet-aks"
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["10.10.1.0/24"]
+}
+
+resource "azurerm_log_analytics_workspace" "law" {
+  name                = "${local.prefix}-law"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+  tags                = local.tags
+}
+
+resource "azurerm_container_registry" "acr" {
+  name                = substr(lower(replace("${local.prefix}acr${random_string.acr.result}", "-", "")), 0, 50)
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  sku                 = "Basic"
+  admin_enabled       = false
+  tags                = local.tags
+}
+
+# ---------- Module AKS (privé + Cilium overlay) ----------
 module "aks" {
+  # Ajuste le chemin selon ton repo :
+  # - si ton module est dans /aks-complet :
   source = "git::https://github.com/ihsenalaya/terraform-modules.git//aks-complet?ref=main"
+  # - sinon, remets //aks si c’est ton dossier module
 
   name                = "${local.prefix}-private"
   location            = azurerm_resource_group.rg.location
@@ -9,12 +89,14 @@ module "aks" {
   kubernetes_version = null
   sku_tier           = "Free"
 
-  # ---- PRIVÉ ----
+  # --- Cluster privé ---
   private_cluster_enabled         = true
   private_dns_zone_id             = "System"
   api_server_authorized_ip_ranges = []
 
-  identity = { type = "SystemAssigned" }
+  identity = {
+    type = "SystemAssigned"
+  }
 
   # RBAC / Entra ID
   rbac = {
@@ -28,7 +110,7 @@ module "aks" {
     workload_identity_enabled = true
   }
 
-  # ======== Cilium + Azure CNI Overlay ========
+  # ===== Cilium (policy + dataplane) sur Azure CNI Overlay =====
   network_data_plane  = "cilium"
   network_plugin_mode = "overlay"
 
@@ -38,7 +120,7 @@ module "aks" {
     vnet_subnet_id    = azurerm_subnet.snet_aks.id  # subnet des NODES
     service_cidr      = "10.20.0.0/16"
     dns_service_ip    = "10.20.0.10"
-    pod_cidr          = "10.244.0.0/16"             # overlay CIDR des PODS
+    pod_cidr          = "10.244.0.0/16"             # requis pour overlay
     load_balancer_sku = "standard"
 
     load_balancer_profile = {
@@ -121,16 +203,15 @@ module "aks" {
     }
   }
 
-  # Add-ons / Policy / CSI / KV
   monitoring = {
     enable_oms_agent            = true
     log_analytics_workspace_id  = azurerm_log_analytics_workspace.law.id
-    azure_policy_enabled        = true                      # <- Azure Policy activé
+    azure_policy_enabled        = true
     enable_kv_secrets_provider  = true
-    kv_secret_rotation_enabled  = true                      # requis par le provider
+    kv_secret_rotation_enabled  = true
   }
 
-  storage_profile = {                                        # <- CSI drivers
+  storage_profile = {
     disk_driver_enabled         = true
     file_driver_enabled         = true
     blob_driver_enabled         = false
@@ -142,3 +223,11 @@ module "aks" {
 
   tags = local.tags
 }
+
+# ---------- Sorties ----------
+output "aks_id"               { value = module.aks.id }
+output "aks_name"             { value = module.aks.name }
+output "aks_fqdn"             { value = module.aks.fqdn }
+output "aks_private_fqdn"     { value = module.aks.private_fqdn }
+output "aks_oidc_issuer_url"  { value = module.aks.oidc_issuer_url }
+output "kubelet_identity_oid" { value = module.aks.kubelet_identity_object_id }

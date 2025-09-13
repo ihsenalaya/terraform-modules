@@ -63,37 +63,42 @@ resource "azurerm_kubernetes_cluster" "this" {
   network_data_plane  = var.network_data_plane           # azure | cilium
   network_plugin_mode = var.network_plugin_mode          # ex: "overlay"
 
-  network_profile {
-    network_plugin    = var.network.network_plugin       # azure | kubenet | azure_overlay
-    network_policy    = try(var.network.network_policy, null)
-    outbound_type     = try(var.network.outbound_type, null)
-    load_balancer_sku = try(var.network.load_balancer_sku, null)
-    pod_cidr          = try(var.network.pod_cidr, null)           # requis pour overlay
-    service_cidr      = try(var.network.service_cidr, null)
-    dns_service_ip    = try(var.network.dns_service_ip, null)
-    vnet_subnet_id    = try(var.network.vnet_subnet_id, null)     # pour nodes
-    pod_subnet_id     = try(var.network.pod_subnet_id, null)      # "advanced networking" Pods
+network_profile {
+  network_plugin      = var.network.network_plugin
+  network_policy      = try(var.network.network_policy, null)
 
-    dynamic "load_balancer_profile" {
-      for_each = try(var.network.load_balancer_profile, null) == null ? [] : [var.network.load_balancer_profile]
-      content {
-        managed_outbound_ip_count   = try(load_balancer_profile.value.managed_outbound_ip_count, null)
-        managed_outbound_ipv6_count = try(load_balancer_profile.value.managed_outbound_ipv6_count, null)
-        outbound_ip_prefix_ids      = try(load_balancer_profile.value.outbound_ip_prefix_ids, null)
-        outbound_ip_address_ids     = try(load_balancer_profile.value.outbound_ip_address_ids, null)
-        outbound_ports_allocated    = try(load_balancer_profile.value.outbound_ports_allocated, null)
-        idle_timeout_in_minutes     = try(load_balancer_profile.value.idle_timeout_in_minutes, null)
-      }
-    }
+  # Cilium / Overlay -> doivent être ICI
+  network_plugin_mode = var.network_plugin_mode          # ex: "overlay"
+  network_data_plane  = var.network_data_plane           # "cilium" | "azure"
 
-    dynamic "nat_gateway_profile" {
-      for_each = try(var.network.nat_gateway_profile, null) == null ? [] : [var.network.nat_gateway_profile]
-      content {
-        managed_outbound_ip_count = try(nat_gateway_profile.value.managed_outbound_ip_count, null)
-        idle_timeout_in_minutes   = try(nat_gateway_profile.value.idle_timeout_in_minutes, null)
-      }
+  load_balancer_sku   = try(var.network.load_balancer_sku, "standard")
+  outbound_type       = try(var.network.outbound_type, null)
+
+  service_cidr        = try(var.network.service_cidr, null)
+  dns_service_ip      = try(var.network.dns_service_ip, null)
+  pod_cidr            = try(var.network.pod_cidr, null)
+
+  dynamic "load_balancer_profile" {
+    for_each = try(var.network.load_balancer_profile, null) == null ? [] : [var.network.load_balancer_profile]
+    content {
+      managed_outbound_ip_count   = try(load_balancer_profile.value.managed_outbound_ip_count, null)
+      managed_outbound_ipv6_count = try(load_balancer_profile.value.managed_outbound_ipv6_count, null)
+      outbound_ip_prefix_ids      = try(load_balancer_profile.value.outbound_ip_prefix_ids, null)
+      outbound_ip_address_ids     = try(load_balancer_profile.value.outbound_ip_address_ids, null)
+      outbound_ports_allocated    = try(load_balancer_profile.value.outbound_ports_allocated, null)
+      idle_timeout_in_minutes     = try(load_balancer_profile.value.idle_timeout_in_minutes, null)
     }
   }
+
+  dynamic "nat_gateway_profile" {
+    for_each = try(var.network.nat_gateway_profile, null) == null ? [] : [var.network.nat_gateway_profile]
+    content {
+      managed_outbound_ip_count = try(nat_gateway_profile.value.managed_outbound_ip_count, null)
+      idle_timeout_in_minutes   = try(nat_gateway_profile.value.idle_timeout_in_minutes, null)
+    }
+  }
+}
+
 
   # Default node pool (pas de node_taints ici)
   default_node_pool {
