@@ -1,15 +1,44 @@
-variable "name"        { type = string }
-variable "location"    { type = string }
-variable "resource_group_name" { type = string }
-variable "dns_prefix"  { type = string }
+variable "name" {
+  type = string
+}
 
-variable "kubernetes_version" { type = string, default = null }
-variable "sku_tier"           { type = string, default = "Free" } # Free | Paid
+variable "location" {
+  type = string
+}
 
-variable "node_resource_group_name" { type = string, default = null }
+variable "resource_group_name" {
+  type = string
+}
 
-variable "private_cluster_enabled" { type = bool, default = false }
-variable "private_dns_zone_id"     { type = string, default = null } # "System" | zone ID | null
+variable "dns_prefix" {
+  type = string
+}
+
+variable "kubernetes_version" {
+  type    = string
+  default = null
+}
+
+variable "sku_tier" {
+  type    = string
+  default = "Free" # Free | Paid
+}
+
+variable "node_resource_group_name" {
+  type    = string
+  default = null
+}
+
+variable "private_cluster_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "private_dns_zone_id" {
+  type    = string
+  default = null # "System" | zone ID | null
+}
+
 variable "api_server_authorized_ip_ranges" {
   type    = list(string)
   default = []
@@ -43,7 +72,7 @@ variable "workload_identity" {
   default = {}
 }
 
-# --------- Réseau / Cilium / Overlay / Advanced ---------
+# Dataplane / CNI mode
 variable "network_data_plane" {
   description = "Dataplane: azure | cilium"
   type        = string
@@ -56,18 +85,18 @@ variable "network_plugin_mode" {
   default     = null
 }
 
+# Réseau
 variable "network" {
-  description = "Paramètres réseau"
   type = object({
     network_plugin    = string                            # azure | kubenet | azure_overlay
     network_policy    = optional(string)                  # azure | calico | cilium
     outbound_type     = optional(string)                  # loadBalancer | userDefinedRouting | managedNATGateway
     load_balancer_sku = optional(string, "standard")
-    pod_cidr          = optional(string)
+    pod_cidr          = optional(string)                  # requis pour overlay
     service_cidr      = optional(string)
     dns_service_ip    = optional(string)
-    vnet_subnet_id    = optional(string)                  # subnet NODES
-    pod_subnet_id     = optional(string)                  # subnet PODS (advanced)
+    vnet_subnet_id    = optional(string)                  # subnet des NODES
+    pod_subnet_id     = optional(string)                  # subnet des PODS (advanced)
 
     load_balancer_profile = optional(object({
       managed_outbound_ip_count   = optional(number)
@@ -85,7 +114,7 @@ variable "network" {
   })
 }
 
-# --------- Autoscaler (cluster) ---------
+# Cluster Autoscaler
 variable "auto_scaler_profile" {
   type = object({
     balance_similar_node_groups    = optional(bool)
@@ -107,7 +136,7 @@ variable "auto_scaler_profile" {
   default = null
 }
 
-# --------- Default pool ---------
+# Default pool
 variable "default_pool" {
   type = object({
     name                  = optional(string, "system")
@@ -153,9 +182,8 @@ variable "default_pool" {
   })
 }
 
-# --------- Node pools additionnels ---------
+# Node pools additionnels
 variable "node_pools" {
-  description = "Pools supplémentaires (map)"
   type = map(object({
     vm_size               = string
     mode                  = optional(string, "User")
@@ -205,24 +233,22 @@ variable "node_pools" {
   default = {}
 }
 
-# --------- Add-ons / Monitoring ---------
+# Add-ons / Monitoring
 variable "monitoring" {
-  description = "Intégrations monitoring & addons"
   type = object({
     enable_oms_agent            = optional(bool, false)
     log_analytics_workspace_id  = optional(string)
     azure_policy_enabled        = optional(bool, false)
 
     enable_kv_secrets_provider  = optional(bool, false)
-    kv_secret_rotation_enabled  = optional(bool)   # requis si enable_kv_secrets_provider=true (un des deux)
+    kv_secret_rotation_enabled  = optional(bool)   # au moins un des deux si activé
     kv_secret_rotation_interval = optional(string) # ex "2m"
   })
   default = {}
 }
 
-# --------- Storage / CSI ---------
+# CSI storage drivers
 variable "storage_profile" {
-  description = "CSI drivers"
   type = object({
     blob_driver_enabled         = optional(bool)
     disk_driver_enabled         = optional(bool)
@@ -232,9 +258,8 @@ variable "storage_profile" {
   default = null
 }
 
-# --------- KMS / etcd ---------
+# KMS / etcd
 variable "kms" {
-  description = "KMS (Key Vault) pour chiffrement etcd"
   type = object({
     key_vault_key_id         = string
     key_vault_network_access = optional(string) # Public | Private
@@ -242,9 +267,8 @@ variable "kms" {
   default = null
 }
 
-# --------- Istio service mesh add-on ---------
+# Istio service mesh (optionnel)
 variable "service_mesh" {
-  description = "Istio-based service mesh add-on"
   type = object({
     internal_ingress_gateway_enabled = optional(bool)
     external_ingress_gateway_enabled = optional(bool)
@@ -252,19 +276,19 @@ variable "service_mesh" {
   default = null
 }
 
-# --------- Disk Encryption Set ---------
+# Disk Encryption Set
 variable "disk_encryption_set_id" {
-  description = "DES pour nœuds/volumes (CMK)"
-  type        = string
-  default     = null
+  type    = string
+  default = null
 }
 
-# --------- ACR ---------
+# ACR
 variable "attach_acr" {
   description = "Créer l'assignation AcrPull pour l'identité kubelet"
   type        = bool
   default     = false
 }
+
 variable "attach_acr_id" {
   description = "ID de l'ACR (scope) à attacher"
   type        = string
