@@ -2,60 +2,63 @@ terraform {
   required_version = ">= 1.6.0"
   required_providers {
     azurerm = { source = "hashicorp/azurerm", version = ">= 4.44.0" }
-    random  = { source = "hashicorp/random",  version = ">= 3.6.2" }
+    random  = { source = "hashicorp/random", version = ">= 3.6.2" }
   }
 }
 provider "azurerm" {
-     features {}
-      }
+  features {}
+}
 
 locals {
   location = "westeurope"
   prefix   = "demo-aks"
-  tags = { env = "playground", owner = "ihsen" }
+  tags     = { env = "playground", owner = "ihsen" }
 }
 
 resource "random_string" "acr" {
-  length = 5, upper = false, numeric = true, special = false
+  length  = 5
+  upper   = false
+  numeric = true
+  special = false
 }
 
 resource "azurerm_resource_group" "rg" {
-  name = "${local.prefix}-rg"
+  name     = "${local.prefix}-rg"
   location = local.location
-  tags = local.tags
+  tags     = local.tags
 }
 
 resource "azurerm_virtual_network" "vnet" {
-  name = "${local.prefix}-vnet"
-  location = azurerm_resource_group.rg.location
+  name                = "${local.prefix}-vnet"
+  location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  address_space = ["10.10.0.0/16"]
-  tags = local.tags
+  address_space       = ["10.10.0.0/16"]
+  tags                = local.tags
 }
 
 resource "azurerm_subnet" "snet_aks" {
-  name = "snet-aks"
+  name                 = "snet-aks"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = ["10.10.1.0/24"]
 }
 
 resource "azurerm_log_analytics_workspace" "law" {
-  name = "${local.prefix}-law"
-  location = azurerm_resource_group.rg.location
+  name                = "${local.prefix}-law"
+  location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  sku = "PerGB2018"
-  retention_in_days = 30
-  tags = local.tags
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+  tags                = local.tags
 }
 
 resource "azurerm_container_registry" "acr" {
-  name = substr(lower(replace("${local.prefix}acr${random_string.acr.result}", "-", "")), 0, 50)
+  name                = substr(lower(replace("${local.prefix}acr${random_string.acr.result}", "-", "")), 0, 50)
   resource_group_name = azurerm_resource_group.rg.name
-  location = azurerm_resource_group.rg.location
-  sku = "Basic"
-  admin_enabled = false
-  tags = local.tags
+  location            = azurerm_resource_group.rg.location
+  sku                 = "Basic"
+  admin_enabled       = false
+  tags                = local.tags
 }
 
 module "aks" {
@@ -96,7 +99,7 @@ module "aks" {
     network_policy    = "cilium"
     service_cidr      = "10.20.0.0/16"
     dns_service_ip    = "10.20.0.10"
-    pod_cidr          = "10.244.0.0/16"   # requis en overlay
+    pod_cidr          = "10.244.0.0/16" # requis en overlay
     load_balancer_sku = "standard"
     load_balancer_profile = {
       managed_outbound_ip_count = 1
@@ -116,16 +119,16 @@ module "aks" {
   }
 
   default_pool = {
-    name                  = "system"
-    vm_size               = "Standard_D2as_v6"
-    auto_scaling_enabled  = true
-    min_count             = 1
-    max_count             = 3
-    zones                 = ["1"]
-    os_disk_size_gb       = 128
-    os_disk_type          = "Managed"
-    node_labels           = { role = "system" }
-    vnet_subnet_id        = azurerm_subnet.snet_aks.id
+    name                 = "system"
+    vm_size              = "Standard_D2as_v6"
+    auto_scaling_enabled = true
+    min_count            = 1
+    max_count            = 3
+    zones                = ["1"]
+    os_disk_size_gb      = 128
+    os_disk_type         = "Managed"
+    node_labels          = { role = "system" }
+    vnet_subnet_id       = azurerm_subnet.snet_aks.id
 
     kubelet_config = {
       cpu_manager_policy      = "static"
@@ -182,11 +185,11 @@ module "aks" {
   }
 
   monitoring = {
-    enable_oms_agent            = true
-    log_analytics_workspace_id  = azurerm_log_analytics_workspace.law.id
-    azure_policy_enabled        = true
-    enable_kv_secrets_provider  = true
-    kv_secret_rotation_enabled  = true
+    enable_oms_agent           = true
+    log_analytics_workspace_id = azurerm_log_analytics_workspace.law.id
+    azure_policy_enabled       = true
+    enable_kv_secrets_provider = true
+    kv_secret_rotation_enabled = true
   }
 
   storage_profile = {
@@ -202,9 +205,9 @@ module "aks" {
   tags = local.tags
 }
 
-output "aks_id"               { value = module.aks.id }
-output "aks_name"             { value = module.aks.name }
-output "aks_fqdn"             { value = module.aks.fqdn }
-output "aks_private_fqdn"     { value = module.aks.private_fqdn }
-output "aks_oidc_issuer_url"  { value = module.aks.oidc_issuer_url }
+output "aks_id" { value = module.aks.id }
+output "aks_name" { value = module.aks.name }
+output "aks_fqdn" { value = module.aks.fqdn }
+output "aks_private_fqdn" { value = module.aks.private_fqdn }
+output "aks_oidc_issuer_url" { value = module.aks.oidc_issuer_url }
 output "kubelet_identity_oid" { value = module.aks.kubelet_identity_object_id }

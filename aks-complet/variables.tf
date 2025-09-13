@@ -3,6 +3,18 @@ variable "kubernetes_version" {
   default = null
 }
 
+variable "name" {
+  type = string
+}
+variable "location" {
+  type = string
+}
+variable "resource_group_name" {
+  type = string
+}
+variable "dns_prefix" {
+  type = string
+}
 variable "sku_tier" {
   type    = string
   default = "Free"
