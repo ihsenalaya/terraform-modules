@@ -1,15 +1,27 @@
-variable "name" { type = string }
-variable "location" { type = string }
-variable "resource_group_name" { type = string }
-variable "dns_prefix" { type = string }
+variable "kubernetes_version" {
+  type    = string
+  default = null
+}
 
-variable "kubernetes_version" { type = string, default = null }
-variable "sku_tier" { type = string, default = "Free" }
+variable "sku_tier" {
+  type    = string
+  default = "Free"
+}
 
-variable "node_resource_group_name" { type = string, default = null }
+variable "node_resource_group_name" {
+  type    = string
+  default = null
+}
 
-variable "private_cluster_enabled" { type = bool, default = false }
-variable "private_dns_zone_id"     { type = string, default = null }
+variable "private_cluster_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "private_dns_zone_id" {
+  type    = string
+  default = null
+}
 
 variable "api_server_authorized_ip_ranges" {
   type    = list(string)
