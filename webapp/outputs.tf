@@ -1,9 +1,3 @@
-
----
-
-## `outputs.tf`
-
-```hcl
 output "web_app_id" {
   value       = azurerm_linux_web_app.this.id
   description = "ID de la Web App."
@@ -28,4 +22,3 @@ output "private_endpoint_ip" {
   value       = try(azurerm_private_endpoint.this[0].private_service_connection[0].private_ip_address, null)
   description = "Adresse IP privée du Private Endpoint (si disponible)."
 }
-```
