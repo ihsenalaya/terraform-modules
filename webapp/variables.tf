@@ -1,36 +1,35 @@
-variable "name" {
-  description = "Nom de la Web App (unique dans Azure)."
-  type        = string
-}
+## `variables.tf`
 
-variable "resource_group_name" {
-  description = "Nom du Resource Group."
-  type        = string
-}
-
-variable "location" {
-  description = "Région Azure."
-  type        = string
-}
+variable "name"                { 
+  description = "Nom de la Web App"           
+   type = string
+    }
+variable "resource_group_name" { 
+  description = "Resource Group" 
+                type = string 
+                }
+variable "location"            { 
+  description = "Région"                      
+    type = string 
+    }
 
 variable "sku_name" {
-  description = "SKU du plan App Service (ex: B1, P1v3)."
-  type        = string
-  default     = "B1"
-}
+   description = "SKU du plan (ex: B1, P1v3)"
+    type = string  
+    default = "B1"
+     }
 
-variable "public" {
-  description = "true: Web App publique. false: Web App privée (Private Endpoint + DNS)."
-  type        = bool
-  default     = true
-}
+variable "public"  {
+   description = "true = public, false = privé (PE + DNS)" 
+   type = bool
+    default = true
+    }
 
-# Requis seulement si public = false
+# Requis si public = false
 variable "subnet_id" {
-  description = "ID de la subnet pour le Private Endpoint (même région que la Web App)."
+  description = "Subnet pour le Private Endpoint"
   type        = string
   default     = null
-
   validation {
     condition     = var.public || (var.subnet_id != null && var.subnet_id != "")
     error_message = "Quand public = false, 'subnet_id' est requis."
@@ -38,10 +37,9 @@ variable "subnet_id" {
 }
 
 variable "private_dns_zone_id" {
-  description = "ID de la Private DNS Zone 'privatelink.azurewebsites.net' à associer."
+  description = "ID de la Private DNS Zone 'privatelink.azurewebsites.net'"
   type        = string
   default     = null
-
   validation {
     condition     = var.public || (var.private_dns_zone_id != null && var.private_dns_zone_id != "")
     error_message = "Quand public = false, 'private_dns_zone_id' est requis."
@@ -49,206 +47,105 @@ variable "private_dns_zone_id" {
 }
 
 # App Settings
-variable "app_settings" {
-  description = "Paires clé/valeur d'App Settings."
-  type        = map(string)
-  default     = {}
-}
+variable "app_settings" { 
+  description = "App Settings" 
+  type = map(string) 
+  default = {} 
+  }
 
-# Identity (SystemAssigned on/off)
-variable "enable_system_identity" {
-  description = "Active l'identity SystemAssigned."
-  type        = bool
-  default     = true
-}
-
-# Site config : paramètres demandés
-variable "app_command_line" {
-  description = "Commande de démarrage (facultatif)."
-  type        = string
-  default     = null
-}
+# === SITE CONFIG — EXACT ===
+variable "app_command_line" { 
+  description = "Commande de démarrage"
+   type = string 
+   default = null 
+   }
 
 variable "container_registry_use_managed_identity" {
-  description = "Utiliser l'identity managée pour tirer l'image (ex: ACR)."
+  description = "Utiliser MSI pour ACR"
   type        = bool
   default     = false
 }
 
 variable "container_registry_managed_identity_client_id" {
-  description = "Client ID de l'User Assigned Identity pour ACR (laisser null pour SystemAssigned)."
+  description = "Client ID d'une User Assigned Identity (laisser null pour SystemAssigned)"
   type        = string
   default     = null
 }
 
 variable "docker_image_name" {
-  description = "Nom d'image + tag (ex: repo/app:tag)."
+  description = "Image + tag (ex: repo/app:1.0.0)"
   type        = string
-  default     = null
 }
 
 variable "docker_registry_url" {
-  description = "URL du registry (ex: https://index.docker.io ou https://<acr>.azurecr.io)."
+  description = "URL du registry (ex: https://myacr.azurecr.io ou https://index.docker.io)"
   type        = string
-  default     = null
 }
 
 variable "docker_registry_username" {
-  description = "Username pour le registry (laisser vide si MSI ACR)."
+  description = "Nom d'utilisateur du registry (laisser null si MSI)"
   type        = string
   default     = null
 }
 
-variable "always_on" {
-  description = "Garder l'app éveillée (conseillé en prod)."
-  type        = bool
-  default     = true
-}
+# Optionnel: logs & CORS
 
-# Logs HTTP vers File System
-variable "enable_http_file_system_logs" {
-  description = "Active les HTTP logs sur file system."
-  type        = bool
-  default     = true
-}
+variable "cors_allowed_origins"      { 
+  description = "CORS origins"      
+   type = list(string)
+    default = [] 
+   }
+variable "cors_support_credentials"   { 
+  description = "CORS credentials"  
+    type = bool      
+    default = false 
+      }
 
-variable "http_logs_retention_in_days" {
-  description = "Rétention des logs HTTP (jours)."
-  type        = number
-  default     = 7
-}
 
-variable "http_logs_retention_in_mb" {
-  description = "Taille max des logs HTTP (MB)."
-  type        = number
-  default     = 35
-}
 
-# Tags
-variable "tags" {
-  description = "Tags à appliquer."
-  type        = map(string)
-  default     = {}
-}
-```hcl
-variable "name" {
-  description = "Nom de la Web App (unique dans Azure)."
-  type        = string
-}
-
-variable "resource_group_name" {
-  description = "Nom du Resource Group."
-  type        = string
-}
-
-variable "location" {
-  description = "Région Azure."
-  type        = string
-}
-
-variable "sku_name" {
-  description = "SKU du plan App Service (ex: B1, P1v3)."
-  type        = string
-  default     = "B1"
-}
-
-variable "public" {
-  description = "true: Web App publique. false: Web App privée (Private Endpoint + DNS)."
-  type        = bool
-  default     = true
-}
-
-# Requis seulement si public = false
-variable "subnet_id" {
-  description = "ID de la subnet pour le Private Endpoint (même région que la Web App)."
-  type        = string
-  default     = null
-
-  validation {
-    condition     = var.public || (var.subnet_id != null && var.subnet_id != "")
-    error_message = "Quand public = false, 'subnet_id' est requis."
+variable "tags" { 
+  description = "Tags" 
+  type = map(string) 
+  default = {} 
+  }
+variable logs {
+  type =object({
+    application_logs_file_system_level = string
+    http_logs  = object({
+    file_system = object({
+    retention_in_days = number
+    retention_in_mb   = number     
+     })     
+    })
+  })
+  default = {
+    application_logs_file_system_level = "Verbose"
+    http_logs = {
+      file_system = {
+        retention_in_days = 7
+        retention_in_mb   = 25
+      }
+    }
   }
 }
-
-variable "private_dns_zone_id" {
-  description = "ID de la Private DNS Zone 'privatelink.azurewebsites.net' à associer."
+variable "service_plan_id" {
+  description = "ID du Service Plan (App Service Plan)"
   type        = string
-  default     = null
+} 
 
-  validation {
-    condition     = var.public || (var.private_dns_zone_id != null && var.private_dns_zone_id != "")
-    error_message = "Quand public = false, 'private_dns_zone_id' est requis."
-  }
-}
-
-# App Settings
-variable "app_settings" {
-  description = "Paires clé/valeur d'App Settings."
-  type        = map(string)
-  default     = {}
-}
-
-# Identity (SystemAssigned on/off)
-variable "enable_system_identity" {
-  description = "Active l'identity SystemAssigned."
-  type        = bool
-  default     = true
-}
-
-# Site config : Docker (optionnel)
-variable "docker_image" {
-  description = "Image Docker (ex: mcr.microsoft.com/azuredocs/aks-helloworld). Si null, aucun stack Docker n'est configuré."
-  type        = string
-  default     = null
-}
-
-variable "docker_image_tag" {
-  description = "Tag Docker (ex: latest)."
-  type        = string
-  default     = null
-}
-
-variable "always_on" {
-  description = "Garder l'app éveillée (conseillé en prod)."
-  type        = bool
-  default     = true
-}
-
-# CORS
-variable "cors_allowed_origins" {
-  description = "Liste des origines autorisées pour CORS. Laisser vide pour ne pas activer CORS."
+variable "identity_ids" {
+  description = "Liste des IDs des User Assigned Identities (laisser vide si SystemAssigned uniquement)"
   type        = list(string)
   default     = []
 }
 
-variable "cors_support_credentials" {
-  description = "Autoriser les credentials pour CORS."
-  type        = bool
-  default     = false
+variable identity {
+  type = string
+  default = "UserAssigned"
 }
 
-# Logs HTTP vers File System
-variable "enable_http_file_system_logs" {
-  description = "Active les HTTP logs sur file system."
-  type        = bool
-  default     = true
-}
-
-variable "http_logs_retention_in_days" {
-  description = "Rétention des logs HTTP (jours)."
-  type        = number
-  default     = 7
-}
-
-variable "http_logs_retention_in_mb" {
-  description = "Taille max des logs HTTP (MB)."
-  type        = number
-  default     = 35
-}
-
-# Tags
-variable "tags" {
-  description = "Tags à appliquer."
-  type        = map(string)
-  default     = {}
+variable "key_vault_reference_identity_id" {
+  description = "Client ID de l'identité (SystemAssigned ou UserAssigned) utilisée pour accéder aux références Key Vault dans les App Settings (laisser null pour ne pas activer cette fonctionnalité)"
+  type        = string
+  default     = null
 }
