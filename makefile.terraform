@@ -1,0 +1,32 @@
+#!make
+SHELL := /bin/bash
+
+DIR_TERR := ${shell pwd}/terraform
+RG_STACCOUNT := rg-dev-layer-jask-eastus-1
+STACCOUNT_NAME := storagetfstate1844
+STACCOUNT_CONTAINER_NAME := tftstates
+
+fmt:
+	@terraform -chdir="${DIR_TERR}" fmt -recursive
+
+validate:
+	@terraform -chdir="${DIR_TERR}" validate
+
+init:
+	@terraform -chdir="${DIR_TERR}" init -upgrade \
+	  -backend-config="storage_account_name=$(STORAGE_ACCOUNT_NAME)" \
+	  -backend-config="container_name=$(STORAGE_CONTAINER_NAME)" \
+	  -backend-config="key=$(TFSTATE_KEY)" \
+	  -backend-config="resource_group_name=$(STORAGE_RESOURCE_GROUP_NAME)"
+
+plan_local:
+	@terraform -chdir="${DIR_TERR}" plan -out tfplan -var-file terraform.tfvars
+
+plan:
+	@terraform -chdir="${DIR_TERR}" plan -out tfplan
+
+apply:
+	@terraform -chdir="${DIR_TERR}" apply -input="false" tfplan
+
+destroy:
+	@terraform -chdir="${DIR_TERR}" destroy -auto-approve
