@@ -1,0 +1,111 @@
+trigger:
+  branches:
+    include:
+      - feature/
+
+pool:
+  name: 'Default'    
+
+parameters:
+- name: clientName
+  displayName: "Nom du client"
+  type: string
+  default: "test" 
+
+variables:
+- group: ${{ parameters.clientName }}
+
+stages:
+
+- stage: infra
+  displayName: 'Terraform Deployment'
+  jobs:
+
+  - job: infra
+    displayName: 'terraform deploy'
+
+    steps:
+    - checkout: self
+    - task: TerraformInstaller@1
+      inputs:
+        terraformVersion: 'latest'
+
+    - task: AzureCLI@2
+      displayName: 'Ensure TF state container exists'
+      inputs:
+        azureSubscription: 'test'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          set -euo pipefail
+          echo "RG=$(STORAGE_RESOURCE_GROUP_NAME)"
+          echo "SA=$(STORAGE_ACCOUNT_NAME)"
+          echo "CN=$(STORAGE_CONTAINER_NAME)"
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'test'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        # workingDirectory: './terraform'
+        inlineScript: make -f makefile.terraform fmt
+      displayName: 'terraform fmt'
+
+      
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'test'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: make -f makefile.terraform init
+      env:
+        TF_VAR_subscription_id: $(AZURE_SUBSCRIPTION_ID)
+        TF_VAR_tenant_id: $(AZURE_TENANT_ID)
+        TF_VAR_client_id: $(AZURE_CLIENT_ID)
+        TF_VAR_client_secret: $(AZURE_CLIENT_SECRET)
+        TF_VAR_code_region: $(code_region)
+        TF_VAR_environment: $(environment)
+        TF_VAR_layer: $(layer)
+        TF_VAR_ver: $(ver)
+      displayName: 'terraform init'
+
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'test'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: make -f makefile.terraform validate
+      env:
+        TF_VAR_subscription_id: $(AZURE_SUBSCRIPTION_ID)
+        TF_VAR_tenant_id: $(AZURE_TENANT_ID)
+        TF_VAR_client_id: $(AZURE_CLIENT_ID)
+        TF_VAR_client_secret: $(AZURE_CLIENT_SECRET)
+        TF_VAR_code_region: $(code_region)
+        TF_VAR_environment: $(environment)
+        TF_VAR_layer: $(layer)
+        TF_VAR_ver: $(ver)
+      displayName: 'terraform validate'
+
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'test'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: make -f makefile.terraform plan
+      env:
+        TF_VAR_subscription_id: $(AZURE_SUBSCRIPTION_ID)
+        TF_VAR_tenant_id: $(AZURE_TENANT_ID)
+        TF_VAR_client_id: $(AZURE_CLIENT_ID)
+        TF_VAR_client_secret: $(AZURE_CLIENT_SECRET)
+        TF_VAR_code_region: $(code_region)
+        TF_VAR_environment: $(environment)
+        TF_VAR_layer: $(layer)
+        TF_VAR_ver: $(ver)
+      displayName: 'terraform plan'
+
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'test'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: make -f makefile.terraform apply
+      displayName: 'terraform apply'
