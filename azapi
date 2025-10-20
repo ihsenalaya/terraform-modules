@@ -1,0 +1,121 @@
+terraform {
+  required_providers {
+    azapi = {
+      source  = "Azure/azapi"
+      version = "~> 1.13"
+    }
+    # azurerm uniquement si tu veux récupérer le workspace par data-source
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.42.0"
+    }
+  }
+}
+
+provider "azapi" {}
+provider "azurerm" { features {} }
+
+############################
+# Variables
+############################
+variable "resource_group_name"    { type = string }
+variable "synapse_workspace_name" { type = string }
+variable "spark_pool_name"        { type = string  default = "spark-35" }
+
+# Optionnel : paramètres de sizing
+variable "location"        { type = string  default = null }
+variable "node_size_family" { type = string default = "MemoryOptimized" }
+variable "node_size"        { type = string default = "Small" }
+variable "min_nodes"        { type = number default = 3 }
+variable "max_nodes"        { type = number default = 10 }
+variable "auto_pause_mins"  { type = number default = 15 }
+
+############################
+# Références existantes
+############################
+data "azurerm_resource_group" "rg" {
+  name = var.resource_group_name
+}
+
+data "azurerm_synapse_workspace" "ws" {
+  name                = var.synapse_workspace_name
+  resource_group_name = data.azurerm_resource_group.rg.name
+}
+
+locals {
+  workspace_id = data.azurerm_synapse_workspace.ws.id
+  location     = coalesce(var.location, data.azurerm_synapse_workspace.ws.location)
+}
+
+############################
+# Création du Spark Pool en 3.5 via AZAPI
+############################
+resource "azapi_resource" "spark_pool" {
+  type      = "Microsoft.Synapse/workspaces/bigDataPools@2021-06-01"
+  name      = var.spark_pool_name
+  parent_id = local.workspace_id
+  location  = local.location
+
+  # Corps ARM tel qu'attendu par l'API Synapse
+  body = jsonencode({
+    properties = {
+      sparkVersion = "3.5"
+
+      # Sizing de base
+      nodeCount       = var.min_nodes
+      nodeSizeFamily  = var.node_size_family
+      nodeSize        = var.node_size
+
+      # AutoScale
+      autoScale = {
+        enabled       = true
+        minNodeCount  = var.min_nodes
+        maxNodeCount  = var.max_nodes
+      }
+
+      # AutoPause
+      autoPause = {
+        enabled         = true
+        delayInMinutes  = var.auto_pause_mins
+      }
+
+      # (Exemples optionnels)
+      # libraryRequirements = {
+      #   filename = "requirements.txt"
+      #   content  = "pandas==2.1.4\nnumpy==1.26.2"
+      # }
+      # sparkConfigProperties = {
+      #   "spark.sql.shuffle.partitions" = "200"
+      # }
+    }
+    tags = {
+      env = "prod"
+      owner = "data-team"
+    }
+  })
+
+  # Exporte des champs utiles de la réponse ARM
+  response_export_values = [
+    "properties.sparkVersion",
+    "properties.provisioningState",
+    "id",
+    "name",
+    "type"
+  ]
+}
+
+############################
+# Lecture/validation (facultatif)
+############################
+data "azapi_resource" "spark_pool_read" {
+  type        = "Microsoft.Synapse/workspaces/bigDataPools@2021-06-01"
+  resource_id = azapi_resource.spark_pool.id
+}
+
+output "spark_pool_version" {
+  value = data.azapi_resource.spark_pool_read.output.properties.sparkVersion
+}
+
+output "spark_pool_state" {
+  value = data.azapi_resource.spark_pool_read.output.properties.provisioningState
+}
