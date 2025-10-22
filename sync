@@ -2,21 +2,24 @@
   displayName: "Deploy Synapse artifacts for BRSI ${{ parameters.environment }} environment"
   inputs:
     azureSubscription: ${{ parameters.azureServiceConnectionName }}
-    scriptType: 'ps'
+    scriptType: 'bash'
     scriptLocation: 'inlineScript'
     inlineScript: |
+      set -euo pipefail
+
       # Variables issues du pipeline
-      $resourceGroup  = "$(azResourceGroupName)"
-      $workspaceName  = "$(azSynapseWorkspaceName)"
-      $templatePath   = "$(Pipeline.Workspace)/drop_synapse/build_synapse/brsi/TemplateForWorkspace-pattern.json"
-      $parametersPath = "$(Pipeline.Workspace)/drop_synapse/build_synapse/brsi/TemplateParametersForWorkspace-pattern.json"
+      resourceGroup="$(azResourceGroupName)"
+      workspaceName="$(azSynapseWorkspaceName)"
+      templatePath="$(Pipeline.Workspace)/drop_synapse/build_synapse/brsi/TemplateForWorkspace-pattern.json"
+      parametersPath="$(Pipeline.Workspace)/drop_synapse/build_synapse/brsi/TemplateParametersForWorkspace-pattern.json"
 
       # Déploiement du template ARM au niveau du resource group
-      az deployment group create `
-        --resource-group "$resourceGroup" `
-        --name "synapseDeployment-$(Build.BuildId)" `
-        --template-file "$templatePath" `
-        --parameters @"$parametersPath" `
-        --parameters workspaceName="$workspaceName" `
-                     MiLogsGlobalPipelineTrigger_properties_MiLogsGlobal_parameters_datalake_account_name="$(azDatalakeName)" `
+      az deployment group create \
+        --resource-group "$resourceGroup" \
+        --name "synapseDeployment-$(Build.BuildId)" \
+        --template-file "$templatePath" \
+        --parameters @"$parametersPath" \
+                     workspaceName="$workspaceName" \
+                     MiLogsGlobalPipelineTrigger_properties_MiLogsGlobal_parameters_datalake_account_name="$(azDatalakeName)" \
                      MiLogsGlobalPipelineTrigger_properties_MiLogsGlobal_parameters_spark_pool_name="$(azSynapseSparkPoolName)"
+
